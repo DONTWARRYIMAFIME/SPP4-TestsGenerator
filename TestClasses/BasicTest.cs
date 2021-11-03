@@ -11,5 +11,10 @@ namespace MyCode
 		public void SecondMethodTest() 
         {
         }
+		
+		public void MethodWithParam(string message) 
+        {
+			Console.Write(message);
+        }
     }
 }

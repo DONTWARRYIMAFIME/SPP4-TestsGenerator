@@ -13,7 +13,7 @@ namespace TestsGenerator.Lib.TreeStructure
         public ClassInfoNode(string name, string namespaceValue, ConstructorInfoNode constructorInfo)
         {
             Name = name;
-            Namespace = @namespaceValue;
+            Namespace = namespaceValue;
             Constructor = constructorInfo;
         }
     }

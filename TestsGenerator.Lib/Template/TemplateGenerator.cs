@@ -12,11 +12,11 @@ namespace TestsGenerator.Lib.Template
 {
     public class TemplateGenerator : ITemplateGenerator
     {
-        private readonly SyntaxToken _emptyLineToken;
-        private readonly ExpressionStatementSyntax _failExpression;
-
         private const string ActualVariableName = "actual";
         private const string ExpectedVariableName = "expected";
+        
+        private readonly SyntaxToken _emptyLineToken;
+        private readonly ExpressionStatementSyntax _failExpression;
 
         private readonly ISyntaxTreeGenerator _treeGenerator;
         
@@ -85,8 +85,9 @@ namespace TestsGenerator.Lib.Template
                      .WithMembers(
                         List(
                         System.Array.Empty<MemberDeclarationSyntax>()
-                            .Concat(CreateTestClassInstanceFieldDeclaration(classInfoNode))
+                            .Concat(CreateFieldDeclaration(classInfoNode))
                             .Concat(CreateInjectedFieldsDeclaration(classInfoNode))
+                            .Concat(CreateConstructorFieldsDeclaration(classInfoNode))
                             .Concat(CreateTestInitializeMethodDeclaration(classInfoNode))
                             .Concat(classInfoNode.Methods.Select(methodInfo => CreateTestMethodDeclaration(methodInfo, classInfoNode)))
                         )
@@ -153,7 +154,7 @@ namespace TestsGenerator.Lib.Template
             return variableName;
         }
 
-        private IEnumerable<FieldDeclarationSyntax> CreateTestClassInstanceFieldDeclaration(ClassInfoNode classInfo)
+        private IEnumerable<FieldDeclarationSyntax> CreateFieldDeclaration(ClassInfoNode classInfo)
         {
             var fieldDeclarations = new List<FieldDeclarationSyntax>();
 
@@ -189,6 +190,49 @@ namespace TestsGenerator.Lib.Template
                 .Select(parameter => CreateInjectedFieldDeclaration(parameter.Type.Typename, parameter.Name))
                 .ToList();
 
+            if (fields.Count > 0)
+            {
+                fields[^1] = fields[^1].WithSemicolonToken(_emptyLineToken);
+            }
+            
+            return fields;
+        }
+        
+        private FieldDeclarationSyntax CreateConstructorFieldDeclaration(string type, string name)
+        {
+            return FieldDeclaration(
+                VariableDeclaration(
+                        IdentifierName(type)
+                    )
+                    .WithVariables(
+                        SingletonSeparatedList(
+                            VariableDeclarator(
+                                    Identifier(CreateVariableName(name, true))
+                                )
+                                .WithInitializer(
+                                    EqualsValueClause(
+                                        DefaultExpression
+                                            (
+                                                IdentifierName(type)
+                                            )
+                                    )
+                                )
+                        )
+                    )
+            ).WithModifiers(
+                TokenList(
+                    Token(SyntaxKind.PrivateKeyword)
+                )
+            );
+        }
+        
+        private IEnumerable<FieldDeclarationSyntax> CreateConstructorFieldsDeclaration(ClassInfoNode classInfo)
+        {
+            var fields = classInfo.Constructor.Parameters
+                .Where(parameter => !parameter.Type.IsInterface)
+                .Select(parameter => CreateConstructorFieldDeclaration(parameter.Type.Typename, parameter.Name))
+                .ToList();
+            
             if (fields.Count > 0)
             {
                 fields[^1] = fields[^1].WithSemicolonToken(_emptyLineToken);
